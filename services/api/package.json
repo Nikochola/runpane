@@ -17,12 +17,10 @@
     "@runpane/passport": "workspace:*",
     "@runpane/policy": "workspace:*",
     "@runpane/prism": "workspace:*",
-    "better-sqlite3": "^11.3.0",
     "hono": "^4.6.0",
     "postgres": "^3.4.9"
   },
   "devDependencies": {
-    "@types/better-sqlite3": "^7.6.0",
     "tsx": "^4.19.0"
   }
 }

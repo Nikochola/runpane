@@ -1,10 +1,13 @@
 import postgres from "postgres";
 import { config } from "./config.js";
 
-if (config.dbProvider !== "postgres") {
-  throw new Error(
-    "SQLite support has been removed. Set RUNPANE_DB_PROVIDER=postgres and DATABASE_URL in .env",
-  );
+if (!config.databaseUrl) {
+  throw new Error("DATABASE_URL environment variable is required");
 }
 
-export const sql = postgres(config.databaseUrl!);
+export const sql = postgres(config.databaseUrl, {
+  // Limit connections for serverless environments
+  max: 1,
+  idle_timeout: 20,
+  connect_timeout: 10,
+});
