@@ -81,7 +81,7 @@ export async function executeSealedIntent(sealed: SealedIntent): Promise<Gateway
     resource: sealed.intent.resource,
   };
   const auth = await Crystal.authorize(crystal, sealed.agentId, req);
-  if (!auth.ok) return { status: "denied", reason: `crystal:${auth.reason}` };
+  if (!auth.ok) return { status: "denied", reason: `crystal:${(auth as any).reason}` };
 
   const { policy, row: org } = await loadOrg(agent.org_id);
   const decision = evaluate(policy, {
@@ -214,7 +214,7 @@ export async function approveIntent(approvalId: string, approverId: string, appr
     amount: sealed.intent.amount,
     vendor: sealed.intent.vendor,
   });
-  if (!auth.ok) return { status: "denied", reason: `crystal:${auth.reason}` };
+  if (!auth.ok) return { status: "denied", reason: `crystal:${(auth as any).reason}` };
 
   return await executeApproved({ sealed, agent: agentRow, crystal, facetHash: auth.facetHash, policyRule: "human_approved", approvalId });
 }
