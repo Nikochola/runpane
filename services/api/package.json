@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "tsx --env-file=.env watch src/index.ts",
-    "start": "tsx --env-file=.env src/index.ts",
+    "dev": "tsx --env-file=.env watch src/server.ts",
+    "start": "tsx --env-file=.env src/server.ts",
     "demo": "tsx --env-file=.env scripts/demo.ts",
     "seed": "tsx --env-file=.env scripts/seed.ts",
     "migrate": "tsx --env-file=.env scripts/migrate.ts"

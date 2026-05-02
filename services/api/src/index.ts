@@ -1,4 +1,3 @@
-import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { Crystal, Ratchet, type CrystalT } from "@runpane/passport";
@@ -572,6 +571,4 @@ app.get("/orgs/:orgId/vendors", async (c) => {
   return c.json({ vendors });
 });
 
-serve({ fetch: app.fetch, port: config.port }, (info) => {
-  console.log(`runpane API listening on http://localhost:${info.port}`);
-});
+export default app;
