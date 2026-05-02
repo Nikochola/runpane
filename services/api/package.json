@@ -17,11 +17,11 @@
     "@runpane/passport": "workspace:*",
     "@runpane/policy": "workspace:*",
     "@runpane/prism": "workspace:*",
+    "@types/node": "^22.0.0",
     "hono": "^4.6.0",
     "postgres": "^3.4.9"
   },
   "devDependencies": {
-    "@types/node": "^22.0.0",
     "tsx": "^4.19.0"
   }
 }
