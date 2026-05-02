@@ -2,7 +2,10 @@ import postgres from "postgres";
 import { config } from "./config.js";
 
 if (!config.databaseUrl) {
-  throw new Error("DATABASE_URL environment variable is required");
+  // Log loudly so Vercel's runtime log captures it before the crash
+  console.error("[runpane] FATAL: DATABASE_URL environment variable is not set.");
+  console.error("[runpane] Set it in Vercel → Project Settings → Environment Variables.");
+  process.exit(1);
 }
 
 export const sql = postgres(config.databaseUrl, {
