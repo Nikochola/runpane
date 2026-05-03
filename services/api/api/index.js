@@ -7358,28 +7358,30 @@ async function auditEvent(orgId, actorType, actorId, action, targetType, targetI
 }
 async function ensureDefaultOrgData(orgId) {
   const now = Date.now();
-  await sql`
-    INSERT INTO billing_customers(org_id, provider, external_customer_id, plan, status, created_at, updated_at)
-    VALUES (${orgId}, 'stripe', ${"cus_" + orgId.slice(-8)}, 'founder', 'trialing', ${now}, ${now})
-    ON CONFLICT(org_id) DO NOTHING
-  `;
   const integrations = [
     { id: "stripe", provider: "stripe_treasury", category: "payments", scopes: ["payments:execute", "payments:reverse"] },
     { id: "qbo", provider: "quickbooks_online", category: "accounting", scopes: ["bills:read", "bill_payments:write"] },
     { id: "zendesk", provider: "zendesk", category: "support", scopes: ["tickets:read", "refunds:prepare"] },
     { id: "workflows", provider: "runpane_workflows", category: "workflow", scopes: ["workflows:trigger"] }
   ];
-  for (const integration of integrations) {
-    await sql`
+  const [vendorRows, invoiceRows] = await Promise.all([
+    sql`SELECT COUNT(*)::bigint AS count FROM vendors WHERE org_id = ${orgId}`,
+    sql`SELECT COUNT(*)::bigint AS count FROM invoices WHERE org_id = ${orgId}`,
+    sql`
+      INSERT INTO billing_customers(org_id, provider, external_customer_id, plan, status, created_at, updated_at)
+      VALUES (${orgId}, 'stripe', ${"cus_" + orgId.slice(-8)}, 'founder', 'trialing', ${now}, ${now})
+      ON CONFLICT(org_id) DO NOTHING
+    `,
+    ...integrations.map((integration) => sql`
       INSERT INTO integrations(id, org_id, provider, category, status, environment, scopes_json, created_at, updated_at)
       VALUES (
         ${"int_" + orgId + "_" + integration.id}, ${orgId}, ${integration.provider}, ${integration.category},
         'mock', 'sandbox', ${JSON.stringify(integration.scopes)}, ${now}, ${now}
       )
       ON CONFLICT(id) DO NOTHING
-    `;
-  }
-  const vendorRows = await sql`SELECT COUNT(*)::bigint AS count FROM vendors WHERE org_id = ${orgId}`;
+    `)
+  ]);
+  const writes = [];
   if (Number(vendorRows[0].count) === 0) {
     const vendors = [
       { id: "aws", name: "Amazon Web Services", allow: 1, ext: "qbo_v_001" },
@@ -7388,14 +7390,13 @@ async function ensureDefaultOrgData(orgId) {
       { id: "globex", name: "Globex Consulting", allow: 0, ext: "qbo_v_004" }
     ];
     for (const vendor of vendors) {
-      await sql`
+      writes.push(sql`
         INSERT INTO vendors(id, org_id, name, on_allowlist, external_id)
         VALUES (${"ven_" + orgId + "_" + vendor.id}, ${orgId}, ${vendor.name}, ${vendor.allow}, ${vendor.ext})
         ON CONFLICT(id) DO NOTHING
-      `;
+      `);
     }
   }
-  const invoiceRows = await sql`SELECT COUNT(*)::bigint AS count FROM invoices WHERE org_id = ${orgId}`;
   if (Number(invoiceRows[0].count) === 0) {
     const invoices = [
       { id: "aws_a", vendor: "aws", number: "AWS-2026-04-A", amount: 28400, due: "2026-05-15" },
@@ -7405,16 +7406,17 @@ async function ensureDefaultOrgData(orgId) {
       { id: "aws_b", vendor: "aws", number: "AWS-2026-04-B", amount: 78e3, due: "2026-05-18" }
     ];
     for (const invoice of invoices) {
-      await sql`
+      writes.push(sql`
         INSERT INTO invoices(id, org_id, vendor_id, number, amount_cents, currency, due_date, status, created_at)
         VALUES (
           ${"inv_" + orgId + "_" + invoice.id}, ${orgId}, ${"ven_" + orgId + "_" + invoice.vendor},
           ${invoice.number}, ${invoice.amount}, 'USD', ${invoice.due}, 'pending', ${now}
         )
         ON CONFLICT(id) DO NOTHING
-      `;
+      `);
     }
   }
+  if (writes.length) await Promise.all(writes);
 }
 async function syncPassportRecords(agentId, crystal) {
   const hash2 = crystal_exports.crystalHash(crystal);
