@@ -13,4 +13,7 @@ export const sql = postgres(config.databaseUrl, {
   max: 1,
   idle_timeout: 20,
   connect_timeout: 10,
+  // Required for Supabase Transaction Pooler (PgBouncer in transaction mode)
+  // Prepared statements are not supported in transaction pooling mode
+  prepare: false,
 });
