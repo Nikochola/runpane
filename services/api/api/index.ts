@@ -8,8 +8,7 @@ export default async function handler(req: Request): Promise<Response> {
   try {
     const [{ handle }, { default: app }] = await Promise.all([
       import("hono/vercel"),
-      // @ts-expect-error - generated at build time, not present at type-check time
-      import("./_app.mjs"),
+      import("./_app.mjs" as any),
     ]);
     return await handle(app)(req);
   } catch (err: any) {
