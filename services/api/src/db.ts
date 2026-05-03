@@ -14,9 +14,9 @@ function createSql() {
   return postgres(config.databaseUrl, {
     max: 1,
     idle_timeout: 20,
-    connect_timeout: 10,
-    // Required for Supabase Transaction Pooler (PgBouncer in transaction mode)
-    prepare: false,
+    connect_timeout: 5, // fail fast — keeps us under Vercel/Railway timeouts
+    ssl: "require",     // Supabase always requires TLS
+    prepare: false,     // required for Supabase Transaction Pooler (Supavisor)
   });
 }
 
