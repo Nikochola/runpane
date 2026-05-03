@@ -13,8 +13,33 @@ import { secretProvider } from "./secrets.js";
 const app = new Hono();
 app.use("/*", cors());
 
+// Global error handler — prevents FUNCTION_INVOCATION_FAILED, surfaces real errors
+app.onError((err, c) => {
+  console.error("[runpane] Unhandled error:", err);
+  return c.json({ error: err.message ?? String(err) }, 500);
+});
+
 app.get("/", (c) => c.json({ name: "runpane", version: "0.1.0", status: "ok" }));
-app.get("/health", (c) => c.json({ ok: true, db: "up", mode: config.nodeEnv, dbProvider: config.dbProvider }));
+
+app.get("/health", async (c) => {
+  const dbUrl = config.databaseUrl;
+  let dbStatus = "unconfigured";
+  if (dbUrl) {
+    try {
+      await sql`SELECT 1`;
+      dbStatus = "ok";
+    } catch (e: any) {
+      dbStatus = "error: " + (e?.message ?? String(e));
+    }
+  }
+  return c.json({
+    ok: dbStatus === "ok",
+    db: dbStatus,
+    mode: config.nodeEnv,
+    dbProvider: config.dbProvider,
+    dbUrlSet: !!dbUrl,
+  });
+});
 
 // ─── HELPERS ───────────────────────────────────────────────────────────────
 

@@ -1,19 +1,23 @@
 import postgres from "postgres";
 import { config } from "./config.js";
 
-if (!config.databaseUrl) {
-  // Log loudly so Vercel's runtime log captures it before the crash
-  console.error("[runpane] FATAL: DATABASE_URL environment variable is not set.");
-  console.error("[runpane] Set it in Vercel → Project Settings → Environment Variables.");
-  process.exit(1);
+// Use a stub when DATABASE_URL is missing so the process doesn't crash —
+// the error surfaces as a JSON 500 instead of FUNCTION_INVOCATION_FAILED.
+function createSql() {
+  if (!config.databaseUrl) {
+    console.error("[runpane] DATABASE_URL is not set — every DB call will return an error");
+    return (() =>
+      Promise.reject(new Error("DATABASE_URL is not configured. Set it in Vercel → Project Settings → Environment Variables."))) as unknown as ReturnType<
+      typeof postgres
+    >;
+  }
+  return postgres(config.databaseUrl, {
+    max: 1,
+    idle_timeout: 20,
+    connect_timeout: 10,
+    // Required for Supabase Transaction Pooler (PgBouncer in transaction mode)
+    prepare: false,
+  });
 }
 
-export const sql = postgres(config.databaseUrl, {
-  // Limit connections for serverless environments
-  max: 1,
-  idle_timeout: 20,
-  connect_timeout: 10,
-  // Required for Supabase Transaction Pooler (PgBouncer in transaction mode)
-  // Prepared statements are not supported in transaction pooling mode
-  prepare: false,
-});
+export const sql = createSql();
