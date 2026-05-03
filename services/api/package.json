@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "tsx --env-file=.env watch src/server.ts",
     "start": "tsx src/server.ts",
+    "vercel-build": "node build.mjs",
     "demo": "tsx --env-file=.env scripts/demo.ts",
     "seed": "tsx --env-file=.env scripts/seed.ts",
     "migrate": "tsx --env-file=.env scripts/migrate.ts"
@@ -22,6 +23,7 @@
     "postgres": "^3.4.9"
   },
   "devDependencies": {
+    "esbuild": "^0.28.0",
     "tsx": "^4.19.0"
   }
 }

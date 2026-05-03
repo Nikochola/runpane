@@ -12,3 +12,6 @@ dist
 .next
 .claude
 .playwright-mcp
+.vercel
+.env*.local
+services/api/api/_app.mjs

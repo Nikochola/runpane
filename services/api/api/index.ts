@@ -1,12 +1,15 @@
+// Vercel serverless entry. The actual app is pre-bundled into ./_app.mjs by
+// the vercel-build step (services/api/build.mjs) — that's the only way to
+// avoid Vercel's serverless runtime trying to resolve workspace .ts files
+// from node_modules at runtime.
 export const config = { runtime: "nodejs" };
 
-// Dynamic imports so ANY module-load error surfaces as JSON
-// instead of the opaque FUNCTION_INVOCATION_FAILED crash
 export default async function handler(req: Request): Promise<Response> {
   try {
     const [{ handle }, { default: app }] = await Promise.all([
       import("hono/vercel"),
-      import("../src/index.js"),
+      // @ts-expect-error - generated at build time, not present at type-check time
+      import("./_app.mjs"),
     ]);
     return await handle(app)(req);
   } catch (err: any) {
