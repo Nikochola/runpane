@@ -1,6 +1,6 @@
-// Bundle the Vercel entry into a single ESM file with everything inlined,
-// so the serverless runtime never has to resolve workspace TS or any other
-// packages from node_modules.
+// Bundle the Vercel entry into a single CommonJS file. Vercel's Node
+// serverless runtime resolves CJS most reliably, and bundling means the
+// runtime never has to find anything in node_modules at runtime.
 import * as esbuild from "esbuild";
 import fs from "node:fs";
 
@@ -8,16 +8,13 @@ await esbuild.build({
   entryPoints: ["src/vercel-entry.ts"],
   bundle: true,
   platform: "node",
-  format: "esm",
+  format: "cjs",
   target: "node20",
-  outfile: "api/index.mjs",
-  banner: {
-    js: "import { createRequire as __createRequire } from 'module';\nconst require = __createRequire(import.meta.url);",
-  },
+  outfile: "api/index.js",
   logLevel: "info",
 });
 
-// Make sure no stale TypeScript entry confuses Vercel's function discovery.
-for (const f of ["api/index.ts", "api/_app.mjs"]) {
+// Clear any older build artifacts so Vercel only sees one entry.
+for (const f of ["api/index.ts", "api/index.mjs", "api/_app.mjs"]) {
   if (fs.existsSync(f)) fs.unlinkSync(f);
 }
