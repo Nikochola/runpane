@@ -6744,7 +6744,9 @@ function createSql() {
     return (() => Promise.reject(new Error("DATABASE_URL is not configured. Set it in Vercel \u2192 Project Settings \u2192 Environment Variables.")));
   }
   return src_default(config.databaseUrl, {
-    max: 1,
+    // Allow several concurrent queries — Supavisor handles many sessions and
+    // Vercel/Railway are fine reusing a small pool across function invocations.
+    max: 5,
     idle_timeout: 20,
     connect_timeout: 5,
     // fail fast — keeps us under Vercel/Railway timeouts
@@ -7447,17 +7449,19 @@ app.post("/orgs", async (c) => {
     INSERT INTO orgs(id, name, created_at, vendor_allowlist_version, policy_json)
     VALUES (${id}, ${name}, ${now}, 1, ${JSON.stringify(DEFAULT_FINANCE_POLICY)})
   `;
-  await sql`
-    INSERT INTO humans(id, org_id, email, name, role, created_at)
-    VALUES (${humanId}, ${id}, 'founder@runpane.ai', 'Founder', 'owner', ${now})
-    ON CONFLICT(id) DO NOTHING
-  `;
-  await sql`
-    INSERT INTO memberships(id, org_id, human_id, role, status, created_at)
-    VALUES (${"mem_" + id + "_owner"}, ${id}, ${humanId}, 'owner', 'active', ${now})
-    ON CONFLICT(org_id, human_id) DO NOTHING
-  `;
-  await ensureDefaultOrgData(id);
+  await Promise.all([
+    sql`
+      INSERT INTO humans(id, org_id, email, name, role, created_at)
+      VALUES (${humanId}, ${id}, 'founder@runpane.ai', 'Founder', 'owner', ${now})
+      ON CONFLICT(id) DO NOTHING
+    `,
+    sql`
+      INSERT INTO memberships(id, org_id, human_id, role, status, created_at)
+      VALUES (${"mem_" + id + "_owner"}, ${id}, ${humanId}, 'owner', 'active', ${now})
+      ON CONFLICT(org_id, human_id) DO NOTHING
+    `,
+    ensureDefaultOrgData(id)
+  ]);
   return c.json({ id, name });
 });
 app.get("/orgs", async (c) => {

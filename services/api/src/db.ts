@@ -12,7 +12,9 @@ function createSql() {
     >;
   }
   return postgres(config.databaseUrl, {
-    max: 1,
+    // Allow several concurrent queries — Supavisor handles many sessions and
+    // Vercel/Railway are fine reusing a small pool across function invocations.
+    max: 5,
     idle_timeout: 20,
     connect_timeout: 5, // fail fast — keeps us under Vercel/Railway timeouts
     ssl: "require",     // Supabase always requires TLS

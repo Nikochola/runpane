@@ -170,21 +170,25 @@ app.post("/orgs", async (c) => {
   const id = "org_" + crypto.randomUUID().replace(/-/g, "").slice(0, 16);
   const now = Date.now();
 
+  // org must exist before child rows due to FKs; everything after that can
+  // run in parallel to keep cross-region latency tolerable.
   await sql`
     INSERT INTO orgs(id, name, created_at, vendor_allowlist_version, policy_json)
     VALUES (${id}, ${name}, ${now}, 1, ${JSON.stringify(DEFAULT_FINANCE_POLICY)})
   `;
-  await sql`
-    INSERT INTO humans(id, org_id, email, name, role, created_at)
-    VALUES (${humanId}, ${id}, 'founder@runpane.ai', 'Founder', 'owner', ${now})
-    ON CONFLICT(id) DO NOTHING
-  `;
-  await sql`
-    INSERT INTO memberships(id, org_id, human_id, role, status, created_at)
-    VALUES (${"mem_" + id + "_owner"}, ${id}, ${humanId}, 'owner', 'active', ${now})
-    ON CONFLICT(org_id, human_id) DO NOTHING
-  `;
-  await ensureDefaultOrgData(id);
+  await Promise.all([
+    sql`
+      INSERT INTO humans(id, org_id, email, name, role, created_at)
+      VALUES (${humanId}, ${id}, 'founder@runpane.ai', 'Founder', 'owner', ${now})
+      ON CONFLICT(id) DO NOTHING
+    `,
+    sql`
+      INSERT INTO memberships(id, org_id, human_id, role, status, created_at)
+      VALUES (${"mem_" + id + "_owner"}, ${id}, ${humanId}, 'owner', 'active', ${now})
+      ON CONFLICT(org_id, human_id) DO NOTHING
+    `,
+    ensureDefaultOrgData(id),
+  ]);
   return c.json({ id, name });
 });
 
